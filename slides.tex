@@ -1,0 +1,52 @@
+%%A Presentation by Krishna Vaidyanathan
+
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{multirow}
+%\usepackage[font=tiny,labelfont=bf]{caption}[numbered]
+
+%% Smart underlining -- from cdi-macros.tex
+\def\ul#1{$\underline{\smash{\hbox{#1}}}$}
+
+%% Shortcuts
+
+\newcommand{\tabitem}{~~\llap{\textbullet}~~}
+
+\newcommand{\bd}{\begin{description}}
+\newcommand{\ed}{\end{description}}
+
+\mode<presentation>
+{
+  \usetheme{Madrid}
+  \useinnertheme{circles}
+  \usecolortheme{beaver}
+}
+\usepackage[english]{babel}
+
+\usepackage{times}
+\usepackage[T1]{fontenc}
+%
+\title[IceFS]{Physical Disentanglement in a Container-Based File System}
+\subtitle{A Presentation for CS854}
+\author[Presented by Krishna Vaidyanathan]{Lanyeu Lue,\\Yupu Zhang,\\Thanh
+    Do,\\Samer Al-Kiswany,\\Andrea C. Arpaci-Dussueau,\\Remzi
+    H. Arpaci-Dussueau\\\vspace{2em}Presented by Krishna Vaidyanathan}
+
+\date{March 4, 2016}
+\newcommand{\bi}{\begin{itemize}}
+\newcommand{\ei}{\end{itemize}}
+
+\newcommand{\bn}{\begin{enumerate}}
+\newcommand{\en}{\end{enumerate}}
+
+\begin{document}
+
+\frame[plain]{\titlepage}
+
+\begin{frame}{Table of Contents}
+\tableofcontents
+\end{frame}
+
+\end{document}
