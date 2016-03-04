@@ -75,7 +75,7 @@
     \ei
 \end{frame}
 
-\begin{frame}{Global Failure}
+\begin{frame}{Motivation: Global Failure}
     \begin{columns}[T]
         \begin{column}{0.5\textwidth}
         \bi
@@ -103,7 +103,7 @@
 \end{columns}
 \end{frame}
 
-\begin{frame}{Slow Recovery}
+\begin{frame}{Motivation: Slow Recovery}
     \begin{columns}[T]
         \begin{column}{0.4\textwidth}
         \bi
@@ -122,7 +122,7 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Bundled Performance}
+\begin{frame}{Motivation: Bundled Performance}
     \begin{columns}[T]
         \begin{column}{0.4\textwidth}
             \bi
@@ -141,6 +141,7 @@
 \end{columns}
 \end{frame}
 
+\section{Current Solutions}
 \begin{frame}{Current Solutions}
     \bi
 \item Namespaces: defines subset of files and directories to be made visible.
@@ -160,6 +161,7 @@
     \ei
 \end{frame}
 
+\section{Usage Scenarios}
 \begin{frame}{Usage Scenarios}
     \bi
 \item Virtual Machines:
@@ -177,10 +179,246 @@
 \item Physical entanglement negatively impacts distributed file systems, especially multi-tenant
     settings.
 \item Specifically, HDFS does not provide fault isolation for applications.
-\item Scenario: four clients concurrently read different files, and the machine
+\item Eg: four clients concurrently read different files, and the machine
     which stores the data blocks crashes.
     \ei
     \ei
 \end{frame}
+
+\begin{frame}{Cube Abstraction}
+    \bi
+\item Enables logical relation between files and directories.
+\item Safely combine performance and reliability properties of groups of files
+    and their metadata.
+\item Each cube is completely independent at the file-system level.
+\item Cubes are:
+    \bn
+\item Isolated
+\item Transparent
+\item Flexible
+\item Elastic
+\item Customized
+\item Lightweight
+    \en
+    \ei
+\end{frame}
+
+\section{Principles of Disentangled Data Structures}
+\begin{frame}{Principles: No Shared Physical Resources}
+    \bi
+\item Storage space is divided into fixed-size block groups.
+\item Each block group has its own metadata.
+\item Files and directories are allocated to particular block groups.
+\item Any block group and its corresponding metadata blocks can be shared across
+    any set of files.
+    \ei
+\end{frame}
+
+\begin{frame}{Principles: No Access Dependency}
+    \bi
+\item Cubes must not contain references/need access to other cubes.
+\item Data structures that violate this: linked list, trees etc.,
+\item One failed entry can affect all entries above or below it.
+    \ei
+\end{frame}
+
+\begin{frame}{Principles: No Bundled Transactions}
+    \bi
+\item To guarantee consistency and metadata, existing file-systems use
+    journaling.
+\item A transaction for this contains temporal updates from many files.
+\item Problems:
+    \bi
+\item Updates to all files in transition fails.
+\item Performance of independent files and workloads coupled.
+    \ei
+    \ei
+\end{frame}
+
+\section{IceFS}
+\begin{frame}
+    \bi
+\item Cubes as basic new abstraction.
+\item Cube implemented as a special directory.
+\item All files and sub-directories belong to same cube.
+\item To create a cube, \texttt{mkdir()} must be called with a cube flag.
+\item To delete, \texttt{rmdir()}.
+%\item Three major benefits:
+    %\bn
+%\item Localized reaction to failures
+%\item Localized recovery
+%\item Specialized journaling performance
+    %\en
+    \ei
+\end{frame}
+
+\begin{frame}{Physical Resource Isolation}
+    \bi
+\item Leverage existing concept of a block group.
+\item Block group can be assigned to only one cube at any time.
+\item All metadata associated with a block group belongs to only one cube.
+    \ei
+\end{frame}
+
+\begin{frame}{Access Independence}
+    \bi
+\item No cube can reference another cube.
+\item One sub-super block for each cube, stored after the super block.
+\item Sub-super block refers its own orphan inode.
+\item Direction indirection:
+    \bi
+\item Each cube records its top directory.
+\item Filesystem performs longest prefix match of pathname among cube's top
+    directory paths.
+\item Only remaining pathname wihtin the cube is traversed in traditional
+    manner.
+\item Eg., for access to \texttt{/home/bob/research/paper.tex}, IceFS skips
+    directly to parsing \texttt{paper.tex} within the cube if
+    \texttt{/home/bob/research} designates the top.
+    \ei
+    \ei
+\end{frame}
+
+\begin{frame}{Transaction Splitting}
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \bi
+        \item Each cube has its own running transaction to buffer writes.
+        \item Transactions committed to disk in parallel without waiting or
+            dependencies.
+        \item Any failure can be attributed to faulty cube and recovery action can be
+            taken only on it.
+            \ei
+        \end{column}
+        \pause
+        \hspace{-2cm}\begin{column}{0.2\textwidth}
+            \begin{figure}
+                \includegraphics[scale=0.3]{./figures/fig7.png}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Benefits of IceFS}
+\begin{frame}{Localized Reactions to Failures}
+    \bi
+\item Fault detection:
+    \bi
+\item IceFS modifies existing detection techniques to make them cube-aware.
+\item Instruments fault-handling and crash-triggering functions to include the
+    ID of responsible cube.
+    \ei
+\item Localized Read-Only:
+    \bi
+\item Individually aborts transactions for a single cube.
+\item Faulty cube alone is made read-only.
+    \ei
+\item Localized Crashes:
+    \bn
+\item Fails the crash-triggering thread.
+\item Prevent new threads.
+\item Evacuates running threads.
+\item Clean up the cube.
+    \en
+    \ei
+\end{frame}
+
+\begin{frame}{Localized Recovery} 
+    \bi
+\item Offline Checking: 
+    \bi
+\item Supports partial checking of a file system by examining
+    only faulty cubes.
+\item ice-fsck identifies, checks, and repairs the faulty cube alone.
+    \ei
+\item Online Checking:
+    \bi
+\item Offline checking implies data will be unavailable, which is not acceptable
+    for many applications.
+\item IceFS enables on-line checking of faulty cubes alone.
+\item Online ice-fsck is a user-space program that takes the ID of the faulty
+    cube.
+    \ei
+    \ei
+\end{frame}
+
+\begin{frame}{Specialized Journaling}
+    \bi
+\item Since there are no dependencies across cubes, different consistency modes
+    for cubes.
+\item Five consistency modes:
+    \bn
+\item no fsync
+\item no journal
+\item writeback journal
+\item ordered journal
+\item data journal
+    \en
+    \ei
+\end{frame}
+
+\section{Implementation \& Evaluation}
+\begin{frame}{Implementation}
+    \bi
+\item Ext3/JBD in Linux 3.5 was modified for data structures and journaling
+    isolation.
+\item VFS for directory indirection.
+\item e2fsprogs 1.42.8 for file system creation and checking.
+    \ei
+\end{frame}
+
+\begin{frame}{Overall Performance}
+    \includegraphics[scale=0.6]{./figures/table3.png}
+\end{frame}
+
+\begin{frame}{Evaluation}
+    \begin{columns}[T]
+        \begin{column}{0.4\textwidth}
+            \begin{figure}
+                \includegraphics[scale=0.3]{./figures/fig8.png}
+                \caption{Performance of IceFS Offline Fsck.}
+            \end{figure}
+        \end{column}
+        \begin{column}{0.4\textwidth}
+            \begin{figure}
+                \includegraphics[scale=0.3]{./figures/fig9.png}
+                \caption{IceFS under different journaling modes.}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Limitations}
+\begin{frame}{Limitations}
+    \begin{columns}[T]
+        \hspace{-4cm}\begin{column}{0.3\textwidth}
+        \bi
+    \item IceFS uses separate journal commit thread for every cube.
+        \ei
+    \end{column}
+    \pause
+    \hspace{-2cm}\begin{column}{0.3\textwidth}
+        \begin{figure}
+            \includegraphics[scale=0.43]{./figures/table4.png}
+        \end{figure}
+    \end{column}
+    \end{columns}
+    \pause
+    \bi
+\item Cache flush time accounts for more in SSD, while seek times dominate in
+    hard drives.
+    \ei
+\end{frame}
+
+\begin{frame}{References}
+\begin{thebibliography}{9}
+    \bibitem{liu14}Lu, L., Zhang, Y., Do, T., Al-Kiswany, S., Arpaci-Dusseau, A.
+    C., \& Arpaci-Dusseau, R. H. (2014). Physical disentanglement in a
+    container-based file system. In 11th USENIX Symposium on Operating Systems
+    Design and Implementation (OSDI 14) (pp. 81-96).
+\end{thebibliography}
+\end{frame}
+
+
 
 \end{document}
