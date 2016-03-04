@@ -151,6 +151,7 @@
 \item Files from different namespaces may still share metadata, system states
     etc.,
     \ei
+    \pause
 \item Static disk partitions: Multiple file systems can be created on separate
     partitions.
     \pause
@@ -261,22 +262,26 @@
 \end{frame}
 
 \begin{frame}{Access Independence}
-    \bi
-\item No cube can reference another cube.
-\item One sub-super block for each cube, stored after the super block.
-\item Sub-super block refers its own orphan inode.
-\item Direction indirection:
-    \bi
-\item Each cube records its top directory.
-\item Filesystem performs longest prefix match of pathname among cube's top
-    directory paths.
-\item Only remaining pathname wihtin the cube is traversed in traditional
-    manner.
-\item Eg., for access to \texttt{/home/bob/research/paper.tex}, IceFS skips
-    directly to parsing \texttt{paper.tex} within the cube if
-    \texttt{/home/bob/research} designates the top.
-    \ei
-    \ei
+            \bi
+        \item No cube can reference another cube.
+        \item One sub-super block for each cube, stored after the super block.
+        \item Sub-super block refers its own orphan inode.
+        \item Direction indirection:
+            \bi
+        \item Each cube records its top directory.
+        \item Filesystem performs longest prefix match of pathname among cube's top
+            directory paths.
+        \item Only remaining pathname wihtin the cube is traversed in traditional
+            manner.
+        \item Eg., for access to \texttt{/home/bob/research/paper.tex}, IceFS skips
+            directly to parsing \texttt{paper.tex} within the cube if
+            \texttt{/home/bob/research} designates the top.
+            \ei
+            \ei
+\end{frame}
+
+\begin{frame}{Disk Layout for IceFS}
+    \includegraphics[scale=0.3]{./figures/fig5.png}
 \end{frame}
 
 \begin{frame}{Transaction Splitting}
@@ -300,7 +305,7 @@
 \end{frame}
 
 \section{Benefits of IceFS}
-\begin{frame}{Localized Reactions to Failures}
+\begin{frame}{Benefits: Localized Reactions to Failures}
     \bi
 \item Fault detection:
     \bi
@@ -323,7 +328,7 @@
     \ei
 \end{frame}
 
-\begin{frame}{Localized Recovery} 
+\begin{frame}{Benefits: Localized Recovery} 
     \bi
 \item Offline Checking: 
     \bi
@@ -342,7 +347,7 @@
     \ei
 \end{frame}
 
-\begin{frame}{Specialized Journaling}
+\begin{frame}{Benefits: Specialized Journaling}
     \bi
 \item Since there are no dependencies across cubes, different consistency modes
     for cubes.
